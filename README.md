@@ -12,7 +12,10 @@ Obcject of two first projects is to learn parallisation of loops, using differen
 Object of rest projects is to learn parallesation using Message-Passing Model.
 
 ## Building
+for practical 1 and 2 
 $ gcc -fopenmp -Wall -o program_output program.c -lm
+for practical 3
+$ mpicc -Wall -o program_output program.c
 
 ## Requirements
 - C compatible compiler

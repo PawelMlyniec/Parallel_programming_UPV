@@ -88,8 +88,8 @@ int Filtro(int pasos, int radio, struct pixel **ppsImagenOrg, struct pixel **pps
            int n, int m)
 {
   int i, j, k, l, p, tot;
-
-  struct { int r, g, b; } resultado;
+  int r,g,b;
+  //struct { int r, g, b; } resultado;
   int **ppdBloque, v;
 
   if ((ppdBloque = (int **)malloc(sizeof(int *) * (2*radio + 1))) == NULL) {
@@ -106,27 +106,31 @@ int Filtro(int pasos, int radio, struct pixel **ppsImagenOrg, struct pixel **pps
       ppdBloque[i + radio][j + radio] = (radio - abs(i)) * (radio - abs(i)) + (radio - abs(j)) * (radio - abs(j)) + 1;
 
   for (p = 0; p < pasos; p++) {
+    #pragma omp parallel for private(v,l,k,j,r,g,b,tot)
     for (i = 0; i < n; i++) {
+     // #pragma omp parallel for private(v,l,k,r,g,b,tot)
       for (j = 0; j < m; j++) {
-        resultado.r = 0;
-        resultado.g = 0;
-        resultado.b = 0;
+        r = 0;
+        g = 0;
+        b = 0;
         tot = 0;
+       // #pragma omp parallel for private(v,l) reduction(+:r,g,b,tot)
         for (k = max(0, i - radio); k <= min(n - 1, i + radio); k++) {
+         // #pragma omp parallel for private(v) reduction(+:r,g,b,tot)
           for (l = max(0, j - radio); l <= min(m - 1, j + radio); l++) {
             v = ppdBloque[k - i + radio][l - j + radio];
-            resultado.r += ppsImagenOrg[k][l].r * v;
-            resultado.g += ppsImagenOrg[k][l].g * v;
-            resultado.b += ppsImagenOrg[k][l].b * v;
+            r += ppsImagenOrg[k][l].r * v;
+            g += ppsImagenOrg[k][l].g * v;
+            b += ppsImagenOrg[k][l].b * v;
             tot += v;
           }
         }
         resultado.r /= tot;
         resultado.g /= tot;
         resultado.b /= tot;
-        ppsImagenDst[i][j].r = resultado.r;
-        ppsImagenDst[i][j].g = resultado.g;
-        ppsImagenDst[i][j].b = resultado.b;
+        ppsImagenDst[i][j].r = r;
+        ppsImagenDst[i][j].g = g;
+        ppsImagenDst[i][j].b = b;
       }
     }
     if (p+1 < pasos)

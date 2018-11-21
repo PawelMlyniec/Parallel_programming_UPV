@@ -1,22 +1,27 @@
 #include <stdio.h>
 #include <math.h>
 #include <limits.h>
+#include <omp.h>
 
 typedef unsigned long long Entero_grande;
 #define ENTERO_MAS_GRANDE  ULLONG_MAX
 
 int primo(Entero_grande n)
 {
-  int p;
+  int p, idThreat;
   Entero_grande i, s;
 
   p = (n % 2 != 0 || n == 2);
 
   if (p) {
     s = sqrt(n);
-
-    for (i = 3; p && i <= s; i += 2)
-      if (n % i == 0) p = 0;
+    
+    #pragma omp parallel private(idThreat, i) shared(p,s)
+    {
+      idThreat = omp_get_thread_num();
+      for (i = 3+(idThreat*2); p && i <= s; i += (omp_get_num_threads()*2))
+          if (n % i == 0) p = 0;
+    }
   }
 
   return p;
@@ -30,8 +35,7 @@ int main()
     /* NADA */
   }
 
-  printf("El mayor primo que cabe en %lu bytes es %llu.\n",
-         sizeof(Entero_grande), n);
+  printf("El mayor primo que cabe en %lu bytes es %llu.\n", sizeof(Entero_grande), n);
 
   return 0;
 }

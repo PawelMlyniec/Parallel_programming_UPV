@@ -140,11 +140,22 @@ int distancia(char s[],char t[])
 void busca_mas_parecidos(int nt1,char *tabla1[],int nt2,char *tabla2[],int ps[])
 { int i,j,d,im,dm;// dm es la distancia del código más parecido, im su índice
   // dm is the distance of the most similar code, im is its index
+  double avP[omp_get_num_threads()], minP[omp_get_num_threads()], maxP[omp_get_num_threads()];
+  int count[omp_get_num_threads()];
 
   #pragma omp parallel
   {
-    #pragma omp for private(j, i, dm, im, d)
+    #pragma omp master
+    printf("number threads: %d\n",omp_get_num_threads());
+
+    count[omp_get_thread_num()] = 0;
+    avP[omp_get_thread_num()] = 0.0;
+    minP[omp_get_thread_num()] = strlen(tabla2[0]);
+    maxP[omp_get_thread_num()] = 0.0;
+    
+    #pragma omp for private(i, dm, im, d) schedule(runtime)
     for ( j = 0 ; j < nt2 ; j++ ) {
+      if(minP[omp_get_thread_num()]==0.0) minP[omp_get_thread_num()]=strlen(tabla2[j]);
       dm = MAX_LON + 1;
       for ( i = 0 ; i < nt1 ; i++ ) {
         d = distancia(tabla1[i],tabla2[j]);
@@ -153,9 +164,23 @@ void busca_mas_parecidos(int nt1,char *tabla1[],int nt2,char *tabla2[],int ps[])
           im = i;
         }
       }
+      count[omp_get_thread_num()]++;
+      avP[omp_get_thread_num()]+=strlen(tabla2[j]);
+      if(minP[omp_get_thread_num()]>strlen(tabla2[j])) minP[omp_get_thread_num()] = strlen(tabla2[j]);
+      if(maxP[omp_get_thread_num()]<strlen(tabla2[j])) maxP[omp_get_thread_num()] = strlen(tabla2[j]);
       ps[j] = im;
     }
+
+    printf("Thread %d of %d: Min/Average/Max length: %.0f/%.1f/%.0f\n",omp_get_thread_num(),omp_get_num_threads(),minP[omp_get_thread_num()],avP[omp_get_thread_num()]/count[omp_get_thread_num()],maxP[omp_get_thread_num()]);
   }
+  for(i=1;i<sizeof(count);i++){
+    count[0]+=count[i];
+    avP[0]+=avP[i];
+    if(minP[0]>minP[i]) minP[0]=minP[i];
+    if(maxP[0]<maxP[i]) maxP[0]=maxP[i];
+  }
+  printf("Total: Min/Average/Max length: %.0f/%.1f/%.0f\n",minP[0],avP[0]/count[0],maxP[0]);
+    
 }
 
 int main(int argc,char *argv[])
@@ -197,6 +222,7 @@ int main(int argc,char *argv[])
       fprintf(stderr,"Error pidiendo memoria para el resultado\n");
     } else {
 
+      // exercise 1 - time for "busca_mas_parecidos"
       t1 = omp_get_wtime();
       busca_mas_parecidos(nt1,tabla1,nt2,tabla2,ps);
       t2 = omp_get_wtime();

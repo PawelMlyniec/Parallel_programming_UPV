@@ -139,15 +139,19 @@ int distancia(char s[],char t[])
 // For each code in tabla2, look for the most similar code in tabla1
 void busca_mas_parecidos(int nt1,char *tabla1[],int nt2,char *tabla2[],int ps[])
 { int i,j,d,im,dm;// dm es la distancia del código más parecido, im su índice
-                  // dm is the distance of the most similar code, im is its index
+  // dm is the distance of the most similar code, im is its index
 
-  #pragma omp parallel
-  {
-    for ( j = 0 ; j < nt2 ; j++ ) {
-      dm = MAX_LON + 1;
-      
-      #pragma omp for private(i, d)
-      for ( i = 0+omp_get_thread_num(); i < nt1 ; i+=omp_get_num_threads() ) {
+  for ( j = 0 ; j < nt2 ; j++ ) {
+    dm = MAX_LON + 1;
+
+    #pragma omp parallel
+    {
+      #pragma omp master
+      if(j==0)
+        printf("number threads: %d\n",omp_get_num_threads());
+
+      #pragma omp for private(d) schedule(runtime)
+      for ( i = 0 ; i < nt1 ; i++ ) {
         d = distancia(tabla1[i],tabla2[j]);
         if ( d < dm ) {
           #pragma omp critical
@@ -156,16 +160,23 @@ void busca_mas_parecidos(int nt1,char *tabla1[],int nt2,char *tabla2[],int ps[])
             im = i;
           }
         }
+        if ( d == dm && i < im ) {
+          #pragma omp critical
+          if ( d == dm && i < im  ) {
+            dm = d;
+            im = i;
+          }
+        }
       }
-      ps[j] = im;
     }
+    ps[j] = im;
   }
 }
 
 int main(int argc,char *argv[])
 { int err,err2,nt1,nt2,*ps,numeros;
   char **tabla1,**tabla2,*salida;
-  double t1, t2;
+  double t1,t2;
 
   if ( argc > 1 && argv[1][0] == '+' ) {// escribir los códigos (write the codes)
     argv++; argc--;
@@ -190,7 +201,7 @@ int main(int argc,char *argv[])
   }
   t2 = omp_get_wtime();
   printf("lee lineas tiempo (seconds): %f\n",t2-t1);
-  
+
   if ( err ) err = 2;
   else if ( err2 ) err = 3;
   else {
@@ -201,6 +212,7 @@ int main(int argc,char *argv[])
       fprintf(stderr,"Error pidiendo memoria para el resultado\n");
     } else {
 
+      // exercise 1 - time for "busca_mas_parecidos"
       t1 = omp_get_wtime();
       busca_mas_parecidos(nt1,tabla1,nt2,tabla2,ps);
       t2 = omp_get_wtime();
@@ -218,4 +230,3 @@ int main(int argc,char *argv[])
 
   return err;
 }
-

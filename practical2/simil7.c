@@ -140,11 +140,13 @@ int distancia(char s[],char t[])
 void busca_mas_parecidos(int nt1,char *tabla1[],int nt2,char *tabla2[],int ps[])
 { int i,j,d,im,dm;// dm es la distancia del código más parecido, im su índice
   // dm is the distance of the most similar code, im is its index
-  double avP[omp_get_num_threads()], minP[omp_get_num_threads()], maxP[omp_get_num_threads()];
-  int count[omp_get_num_threads()];
+
+  
 
   #pragma omp parallel
   {
+    double avP[omp_get_num_threads()], minP[omp_get_num_threads()], maxP[omp_get_num_threads()];
+    int count[omp_get_num_threads()];
     #pragma omp master
     printf("number threads: %d\n",omp_get_num_threads());
 
